@@ -1,0 +1,34 @@
+#!/bin/bash
+
+# Dossier à sauvegarder
+source='/home/'
+destination='/srv/backup'
+max=2
+
+# Récupère le dernier dossier de backup (c'est un numero)
+last=$(ls $destination | grep -e '^[0-9]*$' | sort -n | tail -1)
+
+if [[ -z $last ]]
+then
+	last=-1
+fi
+
+# On incrémente la sauvegarde la plus recente
+last=$((last+1))
+# Effectue la sauvegarde
+rsync -azvu $source "$destination/$last"
+
+# Si le dernier backup était la sauvegarde maximale,
+# On supprime le backup n°0 et on décale tous les indices de backup
+if [ "$last" -gt "$max" ]
+then
+	rm -rf "$destination/0"
+	for i in $(seq 1 $last)
+	do
+		file="$destination/$i"
+		if [[ -e $file ]]
+		then
+			mv $file "$destination/$((i-1))"
+		fi
+	done
+fi
