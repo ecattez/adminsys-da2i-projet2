@@ -50,14 +50,36 @@ Pour finir, éditez le fichier /etc/fstab et insérez les lignes ci-après :
 
 # Script de backup
 
-Commande: ./backup [ start | stop ] [ -r ] [ -e < ssh > ]
+Commande: `./backup [ start | stop ] [ -r ] [ -e <ssh> ]`
 
 | Option | Argument | Description |
 |:-------|:---------|:------------|
 | start | - | Démarre le daemon |
 | stop | - | Arrête le daemon |
 | -r | - | Mode restauration |
-| -e | < ssh > | Sauvegarde vers un dossier distant / Restaure depuis un dossier distant |
+| -e | `<ssh>` | Sauvegarde vers un dossier distant / Restaure depuis un dossier distant |
+
+Le script s'appuie sur certaines commandes shell.
+
+| Commande | Description |
+|:---------|:------------|
+| `rsync -azvu <source> <destination>` | Sauvegarde un dossier source vers un dossier de destination |
+| `crontab -l` | Liste la table des planifications |
+| `crontab -e` | Edite la table des planifications |
+
+Une ligne de la crontab est définie comme suit :
+
+```
+* * * * * <absolute/path/to/command>
+```
+
+Chaque étoile correspond à une échelle de temps (minutes, heures...)
+
+**Exemple**
+
+| Ligne | Description |
+|:---------|:------------|
+| `*/2 * * * 1-5 /<backup_script>` | Exécute le script de backup toutes les 2 minutes du lundi au vendredi |
 
 ## Sauvegarde
 
