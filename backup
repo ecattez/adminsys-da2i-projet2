@@ -1,34 +1,88 @@
 #!/bin/bash
 
-# Dossier à sauvegarder
-source='/home/'
-destination='/srv/backup'
-max=2
+function showHelp
+{
+	echo './backup [ start | stop ] [ -h ] [ -r ] [ -e <ssh> ]'
+	echo "   start    : Démarre le daemon"
+	echo "   stop     : Arrête le daemon"
+	echo "   -h       : Affiche l'aide"
+	echo "   -r       : Mode restauration"
+	echo "   -e <ssh> : Sauvegarde vers un dossier distant / Restaure depuis un dossier distant"
+}
 
-# Récupère le dernier dossier de backup (c'est un numero)
-last=$(ls $destination | grep -e '^[0-9]*$' | sort -n | tail -1)
+# Récupère la dernière backup
+function get_last_backup
+{
+	# Récupère le dernier dossier de backup (c'est un numero)
+	local last=$(ls $destination | grep -e '^[0-9]*$' | sort -n | tail -1)
 
-if [[ -z $last ]]
-then
-	last=-1
-fi
+	if [[ -z $last ]]
+	then
+		last=-1
+	fi
+	
+	echo "$last"
+}
 
-# On incrémente la sauvegarde la plus recente
-last=$((last+1))
+function get_next_backup
+{
+	local last=$(get_last_backup)
+	echo "$((last+1))"
+}
+
+function rename_backups
+{
+	# Si le dernier backup était la sauvegarde max_backup,
+	# On supprime le backup n°0 et on décale tous les indices de backup
+	if [ "$last" -gt "$max_backup" ]
+	then
+		rm -rf "$destination/0"
+		for i in $(seq 1 $last)
+		do
+			file="$destination/$i"
+			if [[ -e $file ]]
+			then
+				mv $file "$destination/$((i-1))"
+			fi
+		done
+	fi
+}
+
 # Effectue la sauvegarde
-rsync -azvu $source "$destination/$last"
+function save
+{
+	rsync -azvu $source "$destination/$last"
+}
 
-# Si le dernier backup était la sauvegarde maximale,
-# On supprime le backup n°0 et on décale tous les indices de backup
-if [ "$last" -gt "$max" ]
-then
-	rm -rf "$destination/0"
-	for i in $(seq 1 $last)
+# Effectue une restauration
+function restore
+{
+	echo 'TODO'
+}
+
+# Lis les différentes options de la commande
+function readOptions
+{
+	while getopts "hre:" option
 	do
-		file="$destination/$i"
-		if [[ -e $file ]]
-		then
-			mv $file "$destination/$((i-1))"
-		fi
+		case $option in
+			h)
+				showHelp
+				;;
+			r)
+				reverse=1
+				;;
+			e)
+				uri=$OPTARG
+				;;
+		esac
 	done
-fi
+}
+
+# Information de sauvegarde
+source='/home'
+destination='/srv/backup'
+max_backup=2
+
+next=$(get_next_backup)
+echo $next
