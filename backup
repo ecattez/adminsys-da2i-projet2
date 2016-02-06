@@ -1,13 +1,19 @@
 #!/bin/bash
 
+# Information de sauvegarde
+min_backup=0
+max_backup=2
+
+# Affiche l'aide de la commande
 function showHelp
 {
-	echo './backup [ start | stop ] [ -h ] [ -r ] [ -e <ssh> ]'
+	echo './backup [ start | stop ] [ -h ] [ -r <nb> ] [ -e <ssh> ]'
 	echo "   start    : Démarre le daemon"
 	echo "   stop     : Arrête le daemon"
 	echo "   -h       : Affiche l'aide"
-	echo "   -r       : Mode restauration"
+	echo "   -r <nb>  : Mode restauration avec le numéro de la sauvegarde à restaurer"
 	echo "   -e <ssh> : Sauvegarde vers un dossier distant / Restaure depuis un dossier distant"
+	exit 0
 }
 
 # Récupère la dernière backup
@@ -21,22 +27,24 @@ function get_last_backup
 		last=-1
 	fi
 	
-	echo "$last"
+	echo $last
 }
 
+# Récupère la prochaine backup créée
 function get_next_backup
 {
 	local last=$(get_last_backup)
 	echo "$((last+1))"
 }
 
+# Renomme les backups en cas de dépassement de la backup maximale
 function rename_backups
 {
 	# Si le dernier backup était la sauvegarde max_backup,
-	# On supprime le backup n°0 et on décale tous les indices de backup
-	if [ "$last" -gt "$max_backup" ]
+	# On supprime le backup n°min_backup et on décale tous les indices de backup
+	if [ $last -gt $max_backup ]
 	then
-		rm -rf "$destination/0"
+		rm -rf "$destination/$min_backup"
 		for i in $(seq 1 $last)
 		do
 			file="$destination/$i"
@@ -48,41 +56,61 @@ function rename_backups
 	fi
 }
 
-# Effectue la sauvegarde
+# Effectue une sauvegarde
 function save
 {
-	rsync -azvu $source "$destination/$last"
+	local source='/home'
+	local destination='/srv/backup'
+	local last=$(get_next_backup)
+	local destination="$destination/$last"
+	
+	if [[ ! -z $ssh_val ]]
+	then
+		destination="$ssh_val:$destination"
+	fi
+	rsync -azvu $source $destination
 }
 
 # Effectue une restauration
 function restore
 {
-	echo 'TODO'
+	local source="/srv/backup/$restore_val"
+	local destination='/home'
+	
+	if [[ ! -z $ssh_val ]]
+	then
+		source="$uri:$source"
+	fi
+	rsync -azvu $source $destination
 }
 
 # Lis les différentes options de la commande
-function readOptions
-{
-	while getopts "hre:" option
-	do
-		case $option in
-			h)
-				showHelp
-				;;
-			r)
-				reverse=1
-				;;
-			e)
-				uri=$OPTARG
-				;;
-		esac
-	done
-}
+state=1
+while getopts "hr:e:" option
+do
+	case $option in
+		h)
+			showHelp
+			;;
+		e)
+			ssh_val=$OPTARG
+			;;
+		r)
+			restore_val=$OPTARG
+			if [ $restore_val -ge $min_backup ] && [ $restore_val -le $max_backup ]
+			then
+				state=2
+			else
+				echo "$restore_val n'est pas une sauvegarde valide."
+			fi
+			;;
+	esac
+done
 
-# Information de sauvegarde
-source='/home'
-destination='/srv/backup'
-max_backup=2
-
-next=$(get_next_backup)
-echo $next
+if [ $state == 1 ]
+then
+	save
+elif [ $state == 2 ]
+then
+	restore
+fi
