@@ -50,12 +50,13 @@ Pour finir, éditez le fichier /etc/fstab et insérez les lignes ci-après :
 
 # Script de backup
 
-Commande: `./backup [ start | stop ] [ -r ] [ -e <ssh> ]`
+Commande: `./backup [ start | stop ] [ -h ] [ -r ] [ -e <ssh> ]`
 
 | Option | Argument | Description |
 |:-------|:---------|:------------|
 | start | - | Démarre le daemon |
 | stop | - | Arrête le daemon |
+| -h | - | Affiche l'aide |
 | -r | - | Mode restauration |
 | -e | `<ssh>` | Sauvegarde vers un dossier distant / Restaure depuis un dossier distant |
 
