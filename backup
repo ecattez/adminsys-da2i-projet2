@@ -7,7 +7,7 @@ max_backup=2
 # Affiche l'aide de la commande
 function showHelp
 {
-	echo './backup [ start | stop ] [ -h ] [ -r <nb> ] [ -e <ssh> ]'
+	echo './backup [ -h ] [ -r <nb> ] [ -e <ssh> ]'
 	echo "   -h       : Affiche l'aide"
 	echo "   -r <nb>  : Mode restauration avec le numéro de la sauvegarde à restaurer"
 	echo "   -e <ssh> : Sauvegarde vers un dossier distant / Restaure depuis un dossier distant"
@@ -43,6 +43,7 @@ function rename_backups
 		for i in $(seq 1 $last)
 		do
 			file="$destination/$i"
+			echo $file
 			if [[ -e $file ]] ; then
 				mv $file "$destination/$((i-1))"
 			fi
@@ -56,12 +57,14 @@ function save
 	local source='/home'
 	local destination='/srv/backup'
 	local last=$(get_next_backup)
-	local destination="$destination/$last"
 	
 	if [[ ! -z $ssh_val ]] ; then
-		destination="$ssh_val:$destination"
-	fi
-	rsync -azvu $source $destination
+		destination="$ssh_val:$destination/$last"
+		rsync -e ssh -azvu $source $destination/$last
+	else
+		rsync -azvu $source $destination/$last
+	fi	
+	rename_backups
 }
 
 # Effectue une restauration
@@ -73,8 +76,10 @@ function restore
 	
 	if [[ ! -z $ssh_val ]] ; then
 		source="$uri:$source"
+		rsync -e ssh -azvu $source/* $destination
+	else
+		rsync -azvu $source/* $destination
 	fi
-	rsync -azvu $source $destination
 }
 
 # Lis les différentes options de la commande
