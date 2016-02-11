@@ -8,8 +8,6 @@ max_backup=2
 function showHelp
 {
 	echo './backup [ start | stop ] [ -h ] [ -r <nb> ] [ -e <ssh> ]'
-	echo "   start    : Démarre le daemon"
-	echo "   stop     : Arrête le daemon"
 	echo "   -h       : Affiche l'aide"
 	echo "   -r <nb>  : Mode restauration avec le numéro de la sauvegarde à restaurer"
 	echo "   -e <ssh> : Sauvegarde vers un dossier distant / Restaure depuis un dossier distant"
@@ -22,8 +20,7 @@ function get_last_backup
 	# Récupère le dernier dossier de backup (c'est un numero)
 	local last=$(ls $destination | grep -e '^[0-9]*$' | sort -n | tail -1)
 
-	if [[ -z $last ]]
-	then
+	if [[ -z $last ]] ; then
 		last=-1
 	fi
 	
@@ -33,8 +30,7 @@ function get_last_backup
 # Récupère la prochaine backup créée
 function get_next_backup
 {
-	local last=$(get_last_backup)
-	echo "$((last+1))"
+	local last=$(get_last_backup) && echo "$((last+1))"
 }
 
 # Renomme les backups en cas de dépassement de la backup maximale
@@ -42,14 +38,12 @@ function rename_backups
 {
 	# Si le dernier backup était la sauvegarde max_backup,
 	# On supprime le backup n°min_backup et on décale tous les indices de backup
-	if [ $last -gt $max_backup ]
-	then
+	if [ $last -gt $max_backup ] ; then
 		rm -rf "$destination/$min_backup"
 		for i in $(seq 1 $last)
 		do
 			file="$destination/$i"
-			if [[ -e $file ]]
-			then
+			if [[ -e $file ]] ; then
 				mv $file "$destination/$((i-1))"
 			fi
 		done
@@ -64,8 +58,7 @@ function save
 	local last=$(get_next_backup)
 	local destination="$destination/$last"
 	
-	if [[ ! -z $ssh_val ]]
-	then
+	if [[ ! -z $ssh_val ]] ; then
 		destination="$ssh_val:$destination"
 	fi
 	rsync -azvu $source $destination
@@ -76,9 +69,9 @@ function restore
 {
 	local source="/srv/backup/$restore_val"
 	local destination='/home'
+	local ssh_option=''
 	
-	if [[ ! -z $ssh_val ]]
-	then
+	if [[ ! -z $ssh_val ]] ; then
 		source="$uri:$source"
 	fi
 	rsync -azvu $source $destination
@@ -97,8 +90,7 @@ do
 			;;
 		r)
 			restore_val=$OPTARG
-			if [ $restore_val -ge $min_backup ] && [ $restore_val -le $max_backup ]
-			then
+			if [ $restore_val -ge $min_backup ] && [ $restore_val -le $max_backup ] ; then
 				state=2
 			else
 				echo "$restore_val n'est pas une sauvegarde valide."
@@ -107,10 +99,8 @@ do
 	esac
 done
 
-if [ $state == 1 ]
-then
+if [ $state == 1 ] ; then
 	save
-elif [ $state == 2 ]
-then
+elif [ $state == 2 ] ; then
 	restore
 fi
